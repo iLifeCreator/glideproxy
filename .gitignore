@@ -21,6 +21,9 @@ pids
 .env.test.local
 .env.production.local
 
+# Keep example files
+!*.example
+
 # SSL certificates
 ssl/
 *.pem
