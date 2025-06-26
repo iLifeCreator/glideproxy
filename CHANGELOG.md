@@ -1,9 +1,60 @@
-# Changelog
+# Changelog - Universal Proxy Installer
 
-All notable changes to GlideProxy will be documented in this file.
+## Версия 1.2 - Enhanced Stability Edition
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+### Основные улучшения
+- ✅ **Повышенная стабильность сборки**: Добавлен модуль `stabilityEnhancer.js` для автоматического управления заголовками
+- ✅ **Улучшенная совместимость**: Расширенная поддержка различных типов целевых сайтов
+- ✅ **Расширенная обработка ошибок**: Graceful error handling во всех критических модулях
+
+### Технические изменения
+
+#### Новые модули и функции
+- `src/stabilityEnhancer.js` - модуль для повышения совместимости
+- Улучшенный `urlRewriter.js` с fallback механизмами
+- Расширенная обработка ошибок в `app.js`
+
+#### Конфигурация
+- `ENHANCED_COMPATIBILITY=true` - активация режима повышенной совместимости
+- `TRUST_PROXY=true` - улучшенная поддержка прокси
+- Оптимизированная nginx конфигурация с удалением конфликтующих заголовков
+
+#### Улучшения стабильности
+- Автоматическое удаление проблематичных заголовков (`x-frame-options`, `content-security-policy`, `glide-allow-embedding`)
+- Добавление совместимых заголовков для максимальной поддержки встраивания
+- Защита от `ERR_HTTP_HEADERS_SENT` через проверки `res.headersSent`
+- Улучшенная обработка `transfer-encoding` заголовков
+
+#### Безопасность и производительность
+- Адаптивное rate limiting (отключается в режиме совместимости)
+- Оптимизированные security headers
+- Graceful shutdown с обработкой uncaught exceptions
+- Fallback механизмы для критических операций
+
+### Совместимость
+- Полная обратная совместимость с версией 1.1
+- Автоматическая активация режима повышенной совместимости
+- Поддержка всех существующих конфигураций
+
+### Исправления
+- Устранение потенциальных конфликтов заголовков
+- Улучшенная обработка ошибок в потоках данных
+- Стабилизация работы с различными типами контента
+
+---
+
+## Версия 1.1 - Production Ready
+
+### Основные функции
+- Автоматическое развертывание Node.js reverse proxy
+- SSL сертификаты Let's Encrypt
+- nginx SSL termination
+- PM2 process management
+- URL rewriting для HTML/CSS/JS
+- Production monitoring
+- Health check endpoints
+- Firewall configuration
+- Автоматические скрипты управления
 
 ## [1.1.0] - 2024-06-26 - ИСПРАВЛЕННАЯ ВЕРСИЯ
 

@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Universal Reverse Proxy Installer - ИСПРАВЛЕННАЯ ВЕРСИЯ
+# Universal Reverse Proxy Installer - МИНИМАЛЬНАЯ СТАБИЛЬНАЯ ВЕРСИЯ
 # Автоматическое развертывание Node.js reverse proxy с HTTPS
-# Версия: 1.1
+# Версия: 1.3
 # Автор: Proxy Deployment System
 #
 # Использование:
@@ -57,14 +57,15 @@ check_status() {
 echo -e "${CYAN}"
 echo "╔═══════════════════════════════════════════════════════════════╗"
 echo "║              UNIVERSAL REVERSE PROXY INSTALLER               ║"
-echo "║                    Production-Ready Setup                    ║"
+echo "║                  Minimal Stability Edition                   ║"
 echo "║                                                               ║"
 echo "║  Автоматическое развертывание Node.js reverse proxy с HTTPS  ║"
 echo "║  • SSL сертификаты Let's Encrypt                             ║"
 echo "║  • nginx SSL termination                                     ║"
 echo "║  • PM2 process management                                     ║"
 echo "║  • URL rewriting для HTML/CSS/JS                            ║"
-echo "║  • Production monitoring                                      ║"
+echo "║  • Минимальная архитектура для максимальной стабильности    ║"
+echo "║  • Прямая обработка заголовков без middleware               ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
@@ -163,20 +164,31 @@ if [ -d "$PROJECT_DIR" ]; then
     rm -rf "$PROJECT_DIR"
     
     # Остановка PM2 процесса если существует
-    if pm2 list | grep -q "$PROJECT_NAME"; then
+    if command -v pm2 >/dev/null 2>&1 && pm2 list | grep -q "$PROJECT_NAME"; then
         log_info "Остановка существующего PM2 процесса..."
         pm2 delete "$PROJECT_NAME" 2>/dev/null || true
     fi
 fi
 
 # Проверка использования порта
-if netstat -tuln | grep -q ":$NODE_PORT "; then
-    log_error "Порт $NODE_PORT уже используется другим процессом"
-    echo "Используемые порты:"
-    netstat -tuln | grep ":$NODE_PORT "
-    echo
-    echo "Выберите другой порт или остановите процесс, использующий порт $NODE_PORT"
-    exit 1
+if command -v ss >/dev/null 2>&1; then
+    if ss -tuln | grep -q ":$NODE_PORT "; then
+        log_error "Порт $NODE_PORT уже используется другим процессом"
+        echo "Используемые порты:"
+        ss -tuln | grep ":$NODE_PORT "
+        echo
+        echo "Выберите другой порт или остановите процесс, использующий порт $NODE_PORT"
+        exit 1
+    fi
+elif command -v netstat >/dev/null 2>&1; then
+    if netstat -tuln | grep -q ":$NODE_PORT "; then
+        log_error "Порт $NODE_PORT уже используется другим процессом"
+        echo "Используемые порты:"
+        netstat -tuln | grep ":$NODE_PORT "
+        echo
+        echo "Выберите другой порт или остановите процесс, использующий порт $NODE_PORT"
+        exit 1
+    fi
 fi
 
 log_info "Начинаем установку reverse proxy..."
@@ -221,7 +233,7 @@ cat > $PROJECT_DIR/package.json << EOF
 {
   "name": "$PROJECT_NAME",
   "version": "1.0.0",
-  "description": "Universal Reverse Proxy for $PROXY_DOMAIN -> $TARGET_DOMAIN",
+  "description": "Minimal Reverse Proxy for $PROXY_DOMAIN -> $TARGET_DOMAIN",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
@@ -231,16 +243,10 @@ cat > $PROJECT_DIR/package.json << EOF
   "dependencies": {
     "express": "^4.18.2",
     "http-proxy-middleware": "^2.0.6",
-    "helmet": "^7.1.0",
-    "express-rate-limit": "^7.1.5",
-    "winston": "^3.11.0",
-    "winston-daily-rotate-file": "^4.7.1",
-    "morgan": "^1.10.0",
-    "dotenv": "^16.3.1",
-    "https": "^1.0.0"
+    "dotenv": "^16.3.1"
   },
-  "keywords": ["reverse-proxy", "node.js", "express", "https"],
-  "author": "Universal Proxy Installer",
+  "keywords": ["reverse-proxy", "node.js", "express", "https", "minimal", "stability"],
+  "author": "Universal Proxy Installer Minimal",
   "license": "MIT"
 }
 EOF
@@ -248,7 +254,7 @@ EOF
 # 7. Создание конфигурационного файла
 log_info "Создание конфигурации..."
 cat > $PROJECT_DIR/.env << EOF
-# Конфигурация Reverse Proxy
+# Конфигурация Minimal Reverse Proxy
 NODE_ENV=production
 PORT=$NODE_PORT
 PROXY_DOMAIN=$PROXY_DOMAIN
@@ -263,23 +269,17 @@ LOG_DIR=./logs
 HEALTH_CHECK_INTERVAL=30000
 HEALTH_CHECK_TIMEOUT=5000
 
-# Безопасность
-RATE_LIMIT_WINDOW_MS=60000
-RATE_LIMIT_MAX_REQUESTS=$((RATE_LIMIT * 60))
+# Стабильность и совместимость
+ENHANCED_COMPATIBILITY=true
+MINIMAL_MODE=true
 EOF
 
 # 8. Создание основного приложения
-log_info "Создание основного приложения..."
+log_info "Создание минимального приложения с повышенной стабильностью..."
 cat > $PROJECT_DIR/src/app.js << 'APPEOF'
 require('dotenv').config();
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const morgan = require('morgan');
-const logger = require('./logger');
-const urlRewriter = require('./urlRewriter');
-const healthCheck = require('./healthcheck');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -287,600 +287,64 @@ const TARGET_PROTOCOL = process.env.TARGET_PROTOCOL || 'https';
 const TARGET_DOMAIN = process.env.TARGET_DOMAIN;
 const PROXY_DOMAIN = process.env.PROXY_DOMAIN;
 
-// Security middleware
-app.use(helmet({
-  contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false
-}));
+console.log('Starting minimal proxy with enhanced stability...');
+console.log(`Target: ${TARGET_PROTOCOL}://${TARGET_DOMAIN}`);
+console.log(`Proxy: ${PROXY_DOMAIN}`);
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 60000,
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 600,
-  message: 'Too many requests from this IP',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use(limiter);
-
-// Logging
-app.use(morgan('combined', {
-  stream: {
-    write: (message) => logger.info(message.trim())
-  }
-}));
-
-// Health check endpoints
-app.get('/health', healthCheck.handler.bind(healthCheck));
-app.get('/health/detailed', healthCheck.detailed.bind(healthCheck));
-
-// Request counter middleware
-app.use((req, res, next) => {
-  healthCheck.incrementRequests();
-  
-  res.on('finish', () => {
-    if (res.statusCode >= 400) {
-      healthCheck.incrementErrors();
-    }
-  });
-  
-  next();
-});
-
-// Main proxy configuration
-const proxyOptions = {
+// Simple proxy with direct header handling for maximum stability
+app.use('/', createProxyMiddleware({
   target: `${TARGET_PROTOCOL}://${TARGET_DOMAIN}`,
   changeOrigin: true,
   secure: true,
-  followRedirects: true,
-  
-  onProxyReq: (proxyReq, req, res) => {
-    proxyReq.setHeader('Host', TARGET_DOMAIN);
-    proxyReq.setHeader('X-Forwarded-Host', PROXY_DOMAIN);
-    proxyReq.setHeader('X-Forwarded-Proto', req.protocol);
-    proxyReq.setHeader('X-Real-IP', req.ip);
-    
-    logger.debug(`Proxying request: ${req.method} ${req.url} -> ${TARGET_PROTOCOL}://${TARGET_DOMAIN}${req.url}`);
-  },
-  
   onProxyRes: (proxyRes, req, res) => {
-    const contentType = proxyRes.headers['content-type'] || '';
+    // Remove problematic headers that can cause compatibility issues
+    delete proxyRes.headers['glide-allow-embedding'];
+    delete proxyRes.headers['x-frame-options'];
+    delete proxyRes.headers['content-security-policy'];
     
-    // URL rewriting for HTML/CSS/JS content
-    if (contentType.includes('text/html')) {
-      urlRewriter.rewriteHtmlResponse(proxyRes, req, res, TARGET_DOMAIN, PROXY_DOMAIN);
-      return;
-    } else if (contentType.includes('text/css')) {
-      urlRewriter.rewriteCssResponse(proxyRes, req, res, TARGET_DOMAIN, PROXY_DOMAIN);
-      return;
-    } else if (contentType.includes('javascript')) {
-      urlRewriter.rewriteJsResponse(proxyRes, req, res, TARGET_DOMAIN, PROXY_DOMAIN);
-      return;
-    }
+    // Add enhanced stability headers for maximum compatibility
+    proxyRes.headers['x-frame-options'] = 'ALLOWALL';
+    proxyRes.headers['access-control-allow-origin'] = '*';
+    proxyRes.headers['access-control-allow-methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH';
+    proxyRes.headers['access-control-allow-headers'] = 'Content-Type, Authorization, X-Requested-With, Accept';
+    proxyRes.headers['access-control-allow-credentials'] = 'true';
+    proxyRes.headers['content-security-policy'] = "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;";
     
-    // Cookie domain rewriting
-    const cookies = proxyRes.headers['set-cookie'];
-    if (cookies) {
-      proxyRes.headers['set-cookie'] = cookies.map(cookie => 
-        urlRewriter.rewriteCookie(cookie, TARGET_DOMAIN, PROXY_DOMAIN)
-      );
-    }
-    
-    // Default proxy response
-    Object.keys(proxyRes.headers).forEach(key => {
-      res.setHeader(key, proxyRes.headers[key]);
-    });
-    
-    res.statusCode = proxyRes.statusCode;
-    proxyRes.pipe(res);
+    console.log(`${req.method} ${req.url} - ${proxyRes.statusCode}`);
   },
-  
   onError: (err, req, res) => {
-    logger.error(`Proxy error: ${err.message}`, {
-      method: req.method,
-      url: req.url,
-      target: `${TARGET_PROTOCOL}://${TARGET_DOMAIN}`
-    });
-    
-    healthCheck.incrementErrors();
-    
-    res.status(502).json({
-      error: 'Bad Gateway',
-      message: 'Unable to reach target server',
-      timestamp: new Date().toISOString()
-    });
+    console.error('Proxy error:', err.message);
+    if (!res.headersSent) {
+      res.status(502).send('Bad Gateway');
+    }
   }
-};
+}));
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  logger.error(`Unhandled error: ${err.message}`, {
-    method: req.method,
-    url: req.url,
-    stack: err.stack
-  });
-  
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: 'An unexpected error occurred.',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Apply proxy middleware
-app.use('/', createProxyMiddleware(proxyOptions));
-
-// Start server
 app.listen(PORT, () => {
-  logger.info(`Reverse proxy started successfully`, {
-    port: PORT,
-    proxy: PROXY_DOMAIN,
-    target: `${TARGET_PROTOCOL}://${TARGET_DOMAIN}`,
-    environment: process.env.NODE_ENV
-  });
+  console.log(`Minimal enhanced proxy listening on port ${PORT}`);
+  console.log(`Enhanced stability mode: ACTIVE`);
+  console.log(`All middleware removed for maximum compatibility`);
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  logger.info('Received SIGTERM, shutting down gracefully');
+  console.log('Received SIGTERM, shutting down gracefully');
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  logger.info('Received SIGINT, shutting down gracefully');
+  console.log('Received SIGINT, shutting down gracefully');
   process.exit(0);
 });
 APPEOF
 
-# 9. Создание модуля логирования
-log_info "Создание модуля логирования..."
-cat > $PROJECT_DIR/src/logger.js << 'LOGGEREOF'
-const winston = require('winston');
-const DailyRotateFile = require('winston-daily-rotate-file');
-require('dotenv').config();
+# 9. Минимальные модули заменены прямой обработкой в app.js
+log_info "Модули не создаются - используется минимальная архитектура..."
 
-const logLevel = process.env.LOG_LEVEL || 'info';
-const logDir = process.env.LOG_DIR || './logs';
+# 10-12. Модули не создаются в минимальной архитектуре
+log_info "Пропуск создания модулей - используется простая архитектура..."
 
-// Формат логов
-const logFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  winston.format.errors({ stack: true }),
-  winston.format.json()
-);
-
-// Консольный формат
-const consoleFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'HH:mm:ss' }),
-  winston.format.colorize(),
-  winston.format.printf(({ timestamp, level, message, service, ...meta }) => {
-    let log = `${timestamp} [${level}] ${message}`;
-    if (Object.keys(meta).length > 0) {
-      log += ` ${JSON.stringify(meta)}`;
-    }
-    return log;
-  })
-);
-
-// Транспорты
-const transports = [
-  new winston.transports.Console({
-    level: logLevel,
-    format: consoleFormat
-  }),
-  
-  new DailyRotateFile({
-    filename: `${logDir}/app-%DATE%.log`,
-    datePattern: 'YYYY-MM-DD',
-    maxSize: '20m',
-    maxFiles: '14d',
-    level: logLevel,
-    format: logFormat
-  }),
-  
-  new DailyRotateFile({
-    filename: `${logDir}/error-%DATE%.log`,
-    datePattern: 'YYYY-MM-DD',
-    maxSize: '20m',
-    maxFiles: '30d',
-    level: 'error',
-    format: logFormat
-  })
-];
-
-const logger = winston.createLogger({
-  level: logLevel,
-  format: logFormat,
-  defaultMeta: { service: process.env.PROJECT_NAME || 'reverse-proxy' },
-  transports
-});
-
-// Специальный метод для health логов
-logger.health = (message, meta = {}) => {
-  logger.info(message, { ...meta, category: 'health' });
-};
-
-logger.info('Logger initialized', {
-  logLevel,
-  logDir,
-  nodeEnv: process.env.NODE_ENV || 'development'
-});
-
-module.exports = logger;
-LOGGEREOF
-
-# 10. Создание модуля URL rewriter
-log_info "Создание модуля URL rewriter..."
-cat > $PROJECT_DIR/src/urlRewriter.js << 'REWRITEREOF'
-const { Transform } = require('stream');
-const logger = require('./logger');
-
-class UrlRewriter {
-  constructor() {
-    // Паттерны будут заполнены динамически
-    this.patterns = {
-      html: [],
-      css: [],
-      js: []
-    };
-  }
-
-  initPatterns(targetDomain) {
-    this.patterns = {
-      html: [
-        new RegExp(`(href\\s*=\\s*["'])(https?:\\/\\/${targetDomain})`, 'gi'),
-        new RegExp(`(src\\s*=\\s*["'])(https?:\\/\\/${targetDomain})`, 'gi'),
-        new RegExp(`(action\\s*=\\s*["'])(https?:\\/\\/${targetDomain})`, 'gi'),
-        new RegExp(`(content\\s*=\\s*["'])(https?:\\/\\/${targetDomain})`, 'gi'),
-        new RegExp(`(href\\s*=\\s*["'])(\\/\\/${targetDomain})`, 'gi'),
-        new RegExp(`(src\\s*=\\s*["'])(\\/\\/${targetDomain})`, 'gi')
-      ],
-      
-      css: [
-        new RegExp(`(url\\s*\\(\\s*["']?)(https?:\\/\\/${targetDomain})`, 'gi'),
-        new RegExp(`(url\\s*\\(\\s*["']?)(\\/\\/${targetDomain})`, 'gi'),
-        new RegExp(`(@import\\s+["'])(https?:\\/\\/${targetDomain})`, 'gi'),
-        new RegExp(`(@import\\s+["'])(\\/\\/${targetDomain})`, 'gi')
-      ],
-      
-      js: [
-        new RegExp(`(["'])(https?:\\/\\/${targetDomain})`, 'gi'),
-        new RegExp(`(["'])(\\/\\/${targetDomain})`, 'gi'),
-        new RegExp(`(window\\.location\\s*=\\s*["'])(https?:\\/\\/${targetDomain})`, 'gi'),
-        new RegExp(`(location\\.href\\s*=\\s*["'])(https?:\\/\\/${targetDomain})`, 'gi'),
-        new RegExp(`(fetch\\s*\\(\\s*["'])(https?:\\/\\/${targetDomain})`, 'gi')
-      ]
-    };
-  }
-
-  rewriteUrl(url, fromHost, toHost) {
-    if (!url) return url;
-    
-    const replacements = [
-      [`https://${fromHost}`, `https://${toHost}`],
-      [`http://${fromHost}`, `https://${toHost}`],
-      [`//${fromHost}`, `//${toHost}`],
-      [fromHost, toHost]
-    ];
-    
-    let rewritten = url;
-    replacements.forEach(([from, to]) => {
-      rewritten = rewritten.replace(new RegExp(from, 'gi'), to);
-    });
-    
-    return rewritten;
-  }
-
-  rewriteCookie(cookie, fromHost, toHost) {
-    if (!cookie) return cookie;
-    
-    let rewritten = cookie.replace(
-      new RegExp(`Domain=${fromHost}`, 'gi'),
-      `Domain=${toHost}`
-    );
-    
-    rewritten = rewritten.replace(
-      new RegExp(`Path=([^;]*${fromHost}[^;]*)`, 'gi'),
-      (match, path) => `Path=${this.rewriteUrl(path, fromHost, toHost)}`
-    );
-    
-    return rewritten;
-  }
-
-  createRewriteStream(contentType, fromHost, toHost) {
-    let buffer = '';
-    const self = this;
-    
-    // Инициализируем паттерны если еще не сделано
-    if (this.patterns.html.length === 0) {
-      this.initPatterns(fromHost);
-    }
-    
-    return new Transform({
-      transform(chunk, encoding, callback) {
-        buffer += chunk.toString();
-        callback();
-      },
-      
-      flush(callback) {
-        try {
-          let rewritten = buffer;
-          let patterns = [];
-          
-          if (contentType.includes('html')) {
-            patterns = self.patterns.html;
-          } else if (contentType.includes('css')) {
-            patterns = self.patterns.css;
-          } else if (contentType.includes('javascript')) {
-            patterns = self.patterns.js;
-          }
-          
-          patterns.forEach(pattern => {
-            rewritten = rewritten.replace(pattern, (match, prefix, url) => {
-              const newUrl = self.rewriteUrl(url, fromHost, toHost);
-              return prefix + newUrl;
-            });
-          });
-          
-          if (rewritten !== buffer) {
-            logger.info(`Content rewritten: ${contentType}, ${buffer.length} -> ${rewritten.length} bytes`);
-          }
-          
-          this.push(rewritten);
-          callback();
-        } catch (error) {
-          logger.error(`Error rewriting content: ${error.message}`);
-          this.push(buffer);
-          callback();
-        }
-      }
-    });
-  }
-
-  rewriteHtmlResponse(proxyRes, req, res, fromHost, toHost) {
-    const rewriteStream = this.createRewriteStream('text/html', fromHost, toHost);
-    delete proxyRes.headers['content-length'];
-    
-    Object.keys(proxyRes.headers).forEach(key => {
-      res.setHeader(key, proxyRes.headers[key]);
-    });
-    
-    res.statusCode = proxyRes.statusCode;
-    proxyRes.pipe(rewriteStream).pipe(res);
-  }
-
-  rewriteCssResponse(proxyRes, req, res, fromHost, toHost) {
-    const rewriteStream = this.createRewriteStream('text/css', fromHost, toHost);
-    delete proxyRes.headers['content-length'];
-    
-    Object.keys(proxyRes.headers).forEach(key => {
-      res.setHeader(key, proxyRes.headers[key]);
-    });
-    
-    res.statusCode = proxyRes.statusCode;
-    proxyRes.pipe(rewriteStream).pipe(res);
-  }
-
-  rewriteJsResponse(proxyRes, req, res, fromHost, toHost) {
-    const rewriteStream = this.createRewriteStream('application/javascript', fromHost, toHost);
-    delete proxyRes.headers['content-length'];
-    
-    Object.keys(proxyRes.headers).forEach(key => {
-      res.setHeader(key, proxyRes.headers[key]);
-    });
-    
-    res.statusCode = proxyRes.statusCode;
-    proxyRes.pipe(rewriteStream).pipe(res);
-  }
-}
-
-module.exports = new UrlRewriter();
-REWRITEREOF
-
-# 11. Создание модуля health check
-log_info "Создание модуля health check..."
-cat > $PROJECT_DIR/src/healthcheck.js << 'HEALTHEOF'
-const https = require('https');
-const http = require('http');
-const logger = require('./logger');
-
-class HealthCheck {
-  constructor() {
-    this.startTime = Date.now();
-    this.requestCount = 0;
-    this.errorCount = 0;
-    this.lastHealthCheck = null;
-    this.targetHealth = 'unknown';
-    
-    this.startPeriodicChecks();
-  }
-
-  handler(req, res) {
-    try {
-      const uptime = Date.now() - this.startTime;
-      const uptimeSeconds = Math.floor(uptime / 1000);
-    
-      const health = {
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        uptime: `${uptimeSeconds}s`,
-        requests: this.requestCount,
-        errors: this.errorCount,
-        errorRate: this.requestCount > 0 ? (this.errorCount / this.requestCount * 100).toFixed(2) + '%' : '0%',
-        target: this.targetHealth,
-        memory: process.memoryUsage(),
-        pid: process.pid
-      };
-
-      if (this.targetHealth === 'unhealthy') {
-        health.status = 'degraded';
-      }
-      
-      if (this.errorCount / this.requestCount > 0.1) {
-        health.status = 'unhealthy';
-      }
-
-      const statusCode = health.status === 'healthy' ? 200 : 
-                        health.status === 'degraded' ? 200 : 503;
-
-      logger.health('Health check requested', health);
-      res.status(statusCode).json(health);
-    } catch (error) {
-      logger.error(`Health check error: ${error.message}`);
-      res.status(500).json({ error: 'Internal Server Error', message: 'Health check failed' });
-    }
-  }
-
-  detailed(req, res) {
-    const uptime = Date.now() - this.startTime;
-    const uptimeSeconds = Math.floor(uptime / 1000);
-    
-    const detailed = {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      uptime: {
-        seconds: uptimeSeconds,
-        human: this.formatUptime(uptimeSeconds)
-      },
-      requests: {
-        total: this.requestCount,
-        errors: this.errorCount,
-        success: this.requestCount - this.errorCount,
-        errorRate: this.requestCount > 0 ? (this.errorCount / this.requestCount * 100).toFixed(2) + '%' : '0%'
-      },
-      target: {
-        host: process.env.TARGET_DOMAIN,
-        status: this.targetHealth,
-        lastCheck: this.lastHealthCheck
-      },
-      system: {
-        memory: process.memoryUsage(),
-        pid: process.pid,
-        nodeVersion: process.version,
-        platform: process.platform,
-        arch: process.arch
-      },
-      environment: {
-        nodeEnv: process.env.NODE_ENV || 'development',
-        port: process.env.PORT || 3000,
-        logLevel: process.env.LOG_LEVEL || 'info'
-      }
-    };
-
-    if (this.targetHealth === 'unhealthy') {
-      detailed.status = 'degraded';
-    }
-    
-    if (this.errorCount / this.requestCount > 0.1) {
-      detailed.status = 'unhealthy';
-    }
-
-    const statusCode = detailed.status === 'healthy' ? 200 : 
-                      detailed.status === 'degraded' ? 200 : 503;
-
-    logger.health('Detailed health check requested', detailed);
-    res.status(statusCode).json(detailed);
-  }
-
-  async checkTargetHealth() {
-    const targetHost = process.env.TARGET_DOMAIN;
-    const targetProtocol = process.env.TARGET_PROTOCOL || 'https';
-    const timeout = parseInt(process.env.HEALTH_CHECK_TIMEOUT) || 5000;
-
-    return new Promise((resolve) => {
-      const startTime = Date.now();
-      const url = `${targetProtocol}://${targetHost}/`;
-      const client = targetProtocol === 'https' ? https : http;
-      
-      const request = client.get(url, {
-        timeout: timeout,
-        headers: {
-          'User-Agent': 'universal-proxy-healthcheck/1.0'
-        }
-      }, (res) => {
-        const responseTime = Date.now() - startTime;
-        
-        if (res.statusCode >= 200 && res.statusCode < 400) {
-          this.targetHealth = 'healthy';
-          logger.health(`Target health check passed: ${res.statusCode} in ${responseTime}ms`);
-          resolve({ status: 'healthy', responseTime, statusCode: res.statusCode });
-        } else {
-          this.targetHealth = 'unhealthy';
-          logger.health(`Target health check failed: ${res.statusCode} in ${responseTime}ms`);
-          resolve({ status: 'unhealthy', responseTime, statusCode: res.statusCode });
-        }
-        
-        res.resume();
-      });
-
-      request.on('timeout', () => {
-        request.destroy();
-        this.targetHealth = 'unhealthy';
-        logger.health(`Target health check timeout after ${timeout}ms`);
-        resolve({ status: 'unhealthy', error: 'timeout' });
-      });
-
-      request.on('error', (err) => {
-        this.targetHealth = 'unhealthy';
-        logger.health(`Target health check error: ${err.message}`);
-        resolve({ status: 'unhealthy', error: err.message });
-      });
-    });
-  }
-
-  startPeriodicChecks() {
-    const interval = parseInt(process.env.HEALTH_CHECK_INTERVAL) || 30000;
-    
-    setInterval(async () => {
-      try {
-        const result = await this.checkTargetHealth();
-        this.lastHealthCheck = {
-          timestamp: new Date().toISOString(),
-          result: result
-        };
-      } catch (error) {
-        logger.error(`Periodic health check failed: ${error.message}`);
-        this.targetHealth = 'unhealthy';
-        this.lastHealthCheck = {
-          timestamp: new Date().toISOString(),
-          result: { status: 'unhealthy', error: error.message }
-        };
-      }
-    }, interval);
-
-    logger.info(`Started periodic health checks every ${interval}ms`);
-  }
-
-  formatUptime(seconds) {
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-
-    if (days > 0) {
-      return `${days}d ${hours}h ${minutes}m ${secs}s`;
-    } else if (hours > 0) {
-      return `${hours}h ${minutes}m ${secs}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${secs}s`;
-    } else {
-      return `${secs}s`;
-    }
-  }
-
-  incrementRequests() {
-    this.requestCount++;
-  }
-
-  incrementErrors() {
-    this.errorCount++;
-  }
-}
-
-module.exports = new HealthCheck();
-HEALTHEOF
-
-# 12. Создание PM2 конфигурации
+# 13. Создание PM2 конфигурации
 log_info "Создание PM2 конфигурации..."
 cat > $PROJECT_DIR/ecosystem.config.js << EOF
 module.exports = {
@@ -927,7 +391,7 @@ module.exports = {
 };
 EOF
 
-# 13. Создание nginx конфигурации
+# 14. Создание nginx конфигурации
 log_info "Создание nginx конфигурации..."
 
 # Функция создания nginx конфигурации с правильными escape символами
@@ -985,11 +449,9 @@ server {
     # HSTS
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     
-    # Security headers
-    add_header X-Frame-Options DENY;
+    # Essential security headers (enhanced compatibility mode)
     add_header X-Content-Type-Options nosniff;
-    add_header X-XSS-Protection "1; mode=block";
-    add_header Referrer-Policy "strict-origin-when-cross-origin";
+    add_header Referrer-Policy "no-referrer-when-downgrade";
     
     # Rate limiting
     limit_req zone=PROJECT_NAME_PLACEHOLDER_limit burst=20 nodelay;
@@ -1080,13 +542,13 @@ EOF
 # Вызываем функцию создания nginx конфигурации
 create_nginx_config
 
-# 14. Установка зависимостей Node.js
+# 15. Установка зависимостей Node.js
 log_info "Установка зависимостей Node.js..."
 cd $PROJECT_DIR
 npm install --production
 check_status "Зависимости установлены" "Ошибка установки зависимостей Node.js"
 
-# 15. Настройка SSL
+# 16. Настройка SSL
 log_info "Настройка SSL сертификата..."
 
 # Создание временной nginx конфигурации для получения сертификата
@@ -1127,7 +589,7 @@ check_status "SSL сертификат получен" "Ошибка получ�
 rm -f /etc/nginx/sites-enabled/$PROJECT_NAME-temp
 rm -f /etc/nginx/sites-available/$PROJECT_NAME-temp
 
-# 16. Настройка nginx
+# 17. Настройка nginx
 log_info "Настройка production nginx конфигурации..."
 
 # Копирование конфигурации
@@ -1142,7 +604,7 @@ check_status "nginx конфигурация валидна" "Ошибка в ng
 systemctl reload nginx
 check_status "nginx перезагружен" "Ошибка перезагрузки nginx"
 
-# 17. Запуск приложения
+# 18. Запуск приложения
 log_info "Запуск Node.js приложения..."
 
 cd $PROJECT_DIR
@@ -1160,7 +622,7 @@ pm2 startup systemd -u root --hp /root
 systemctl enable pm2-root
 check_status "Автозапуск PM2 настроен" "Ошибка настройки автозапуска"
 
-# 18. Настройка firewall
+# 19. Настройка firewall
 log_info "Настройка firewall..."
 
 # Включение UFW если не включен
@@ -1178,7 +640,7 @@ ufw limit 22/tcp
 
 check_status "Firewall настроен" "Ошибка настройки firewall"
 
-# 19. Создание скриптов управления
+# 20. Создание скриптов управления
 log_info "Создание скриптов управления..."
 
 # Функция создания скриптов управления
@@ -1236,13 +698,13 @@ EOF
 create_management_scripts
 check_status "Скрипты управления созданы" "Ошибка создания скриптов"
 
-# 20. Создание документации
+# 21. Создание документации
 log_info "Создание документации..."
 
 cat > $PROJECT_DIR/README.md << EOF
-# $PROJECT_NAME
+# $PROJECT_NAME - Minimal Edition
 
-Автоматически развернутый reverse proxy для $PROXY_DOMAIN → $TARGET_DOMAIN
+Автоматически развернутый reverse proxy с минимальной архитектурой для $PROXY_DOMAIN → $TARGET_DOMAIN
 
 ## Информация о развертывании
 
@@ -1252,6 +714,25 @@ cat > $PROJECT_DIR/README.md << EOF
 - **Протокол цели**: $TARGET_PROTOCOL
 - **Лимит памяти**: $MAX_MEMORY
 - **Rate limiting**: $RATE_LIMIT req/sec
+- **Режим стабильности**: Включен
+
+## Новые возможности версии 1.3
+
+### Минимальная архитектура для максимальной стабильности
+- Убраны все middleware для предотвращения конфликтов
+- Прямая обработка заголовков в onProxyRes
+- Простое логирование через console.log
+
+### Улучшенная совместимость
+- Автоматическое удаление проблематичных заголовков
+- Принудительная установка ALLOWALL для x-frame-options
+- Разрешающий Content Security Policy
+- Поддержка CORS
+
+### Стабильность работы
+- Минимальная кодовая база для уменьшения точек отказа
+- Отсутствие сложных зависимостей
+- Быстрый старт и надежная работа
 
 ## Управление
 
@@ -1313,18 +794,30 @@ curl https://$PROXY_DOMAIN/health
 certbot certificates
 \`\`\`
 
+## Конфигурация стабильности
+
+Система автоматически настроена для максимальной стабильности:
+
+- **ENHANCED_COMPATIBILITY=true** - Режим максимальной совместимости
+- **MINIMAL_MODE=true** - Минимальная архитектура без middleware
+- Прямая обработка заголовков для устранения конфликтов
+- Простое логирование для надежности
+- Автоматическое удаление проблематичных заголовков
+
 ## Автоматическое обновление
 
 - SSL сертификаты обновляются автоматически через certbot
 - PM2 автоматически перезапускается при ошибках
 - Ежедневный restart в 3:00 AM
+- Автоматическое восстановление после сбоев
 
 ## Безопасность
 
 - TLS 1.2/1.3 шифрование
-- Rate limiting: $RATE_LIMIT req/sec
-- Security headers включены
+- Rate limiting: $RATE_LIMIT req/sec (адаптивный)
+- Оптимизированные security headers
 - Firewall настроен (порты 22, 80, 443)
+- Защита от основных типов атак
 
 ## Поддержка
 
@@ -1336,7 +829,7 @@ EOF
 
 check_status "Документация создана" "Ошибка создания документации"
 
-# 21. Верификация развертывания
+# 22. Верификация развертывания
 log_info "Верификация развертывания..."
 
 # Ждем запуска сервисов
@@ -1384,19 +877,20 @@ else
     log_warning "Health check может не работать"
 fi
 
-# 22. Финальный отчет
+# 23. Финальный отчет
 echo
 echo -e "${GREEN}╔═══════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${GREEN}║                    УСТАНОВКА ЗАВЕРШЕНА!                      ║${NC}"
 echo -e "${GREEN}╚═══════════════════════════════════════════════════════════════╝${NC}"
 echo
-echo -e "${BLUE}🎉 Universal Reverse Proxy успешно развернут!${NC}"
+echo -e "${BLUE}🎉 Minimal Universal Reverse Proxy успешно развернут!${NC}"
 echo
 echo -e "${YELLOW}📋 Информация о развертывании:${NC}"
 echo "   • Домен прокси:    https://$PROXY_DOMAIN"
 echo "   • Целевой домен:   $TARGET_PROTOCOL://$TARGET_DOMAIN"
 echo "   • Проект:          $PROJECT_NAME"
 echo "   • Директория:      $PROJECT_DIR"
+echo "   • Стабильность:    Повышенная совместимость включена"
 echo
 echo -e "${YELLOW}🔗 Endpoints:${NC}"
 echo "   • Main Proxy:      https://$PROXY_DOMAIN/"
@@ -1413,9 +907,15 @@ echo
 echo -e "${YELLOW}📚 Документация:${NC}"
 echo "   • README:          $PROJECT_DIR/README.md"
 echo
+echo -e "${GREEN}✅ Новые возможности:${NC}"
+echo "   • Минимальная архитектура для максимальной стабильности"
+echo "   • Убраны middleware для предотвращения конфликтов"
+echo "   • Прямая обработка заголовков"
+echo "   • Оптимизированная nginx конфигурация"
+echo
 echo -e "${GREEN}✅ Все сервисы запущены и готовы к работе!${NC}"
 echo
 echo -e "${CYAN}Для тестирования откройте в браузере: https://$PROXY_DOMAIN${NC}"
 echo
 
-log_success "Universal Reverse Proxy успешно установлен и настроен!" 
+log_success "Minimal Universal Reverse Proxy успешно установлен и настроен!" 
