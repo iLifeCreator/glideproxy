@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Universal Reverse Proxy Installer
+# Universal Reverse Proxy Installer - ИСПРАВЛЕННАЯ ВЕРСИЯ
 # Автоматическое развертывание Node.js reverse proxy с HTTPS
-# Версия: 1.0
+# Версия: 1.1
 # Автор: Proxy Deployment System
 #
 # Использование:
@@ -148,6 +148,37 @@ fi
 # Определение директории проекта
 PROJECT_DIR="/opt/$PROJECT_NAME"
 
+# Проверка существования проекта
+if [ -d "$PROJECT_DIR" ]; then
+    log_warning "Проект $PROJECT_NAME уже существует в $PROJECT_DIR"
+    if [ -z "$AUTO_CONFIRM" ]; then
+        read -p "Удалить существующий проект и продолжить? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            log_info "Установка отменена"
+            exit 0
+        fi
+    fi
+    log_info "Удаляем существующий проект..."
+    rm -rf "$PROJECT_DIR"
+    
+    # Остановка PM2 процесса если существует
+    if pm2 list | grep -q "$PROJECT_NAME"; then
+        log_info "Остановка существующего PM2 процесса..."
+        pm2 delete "$PROJECT_NAME" 2>/dev/null || true
+    fi
+fi
+
+# Проверка использования порта
+if netstat -tuln | grep -q ":$NODE_PORT "; then
+    log_error "Порт $NODE_PORT уже используется другим процессом"
+    echo "Используемые порты:"
+    netstat -tuln | grep ":$NODE_PORT "
+    echo
+    echo "Выберите другой порт или остановите процесс, использующий порт $NODE_PORT"
+    exit 1
+fi
+
 log_info "Начинаем установку reverse proxy..."
 
 # 1. Обновление системы
@@ -157,7 +188,7 @@ check_status "Пакеты обновлены" "Ошибка обновлени�
 
 # 2. Установка зависимостей
 log_info "Установка системных зависимостей..."
-apt-get install -y curl wget gnupg2 software-properties-common nginx certbot python3-certbot-nginx ufw jq
+apt-get install -y curl wget gnupg2 software-properties-common nginx certbot python3-certbot-nginx ufw jq net-tools
 check_status "Зависимости установлены" "Ошибка установки зависимостей"
 
 # 3. Установка Node.js
@@ -898,23 +929,26 @@ EOF
 
 # 13. Создание nginx конфигурации
 log_info "Создание nginx конфигурации..."
-cat > $PROJECT_DIR/config/nginx-proxy.conf << EOF
-# Nginx configuration for $PROXY_DOMAIN
+
+# Функция создания nginx конфигурации с правильными escape символами
+create_nginx_config() {
+    cat > "$PROJECT_DIR/config/nginx-proxy.conf" << 'EOF'
+# Nginx configuration for PROXY_DOMAIN_PLACEHOLDER
 # SSL termination + proxy to Node.js app
 
-upstream ${PROJECT_NAME}_backend {
-    server 127.0.0.1:$NODE_PORT;
+upstream PROJECT_NAME_PLACEHOLDER_backend {
+    server 127.0.0.1:NODE_PORT_PLACEHOLDER;
     keepalive 32;
 }
 
 # Rate limiting
-limit_req_zone \\$binary_remote_addr zone=${PROJECT_NAME}_limit:10m rate=${RATE_LIMIT}r/s;
-limit_conn_zone \\$binary_remote_addr zone=${PROJECT_NAME}_conn:10m;
+limit_req_zone $binary_remote_addr zone=PROJECT_NAME_PLACEHOLDER_limit:10m rate=RATE_LIMIT_PLACEHOLDERr/s;
+limit_conn_zone $binary_remote_addr zone=PROJECT_NAME_PLACEHOLDER_conn:10m;
 
 # HTTP to HTTPS redirect
 server {
     listen 80;
-    server_name $PROXY_DOMAIN;
+    server_name PROXY_DOMAIN_PLACEHOLDER;
     
     # Let's Encrypt challenge
     location /.well-known/acme-challenge/ {
@@ -923,14 +957,14 @@ server {
     
     # Redirect all HTTP to HTTPS
     location / {
-        return 301 https://\\$server_name\\$request_uri;
+        return 301 https://$server_name$request_uri;
     }
 }
 
 # HTTPS server
 server {
     listen 443 ssl http2;
-    server_name $PROXY_DOMAIN;
+    server_name PROXY_DOMAIN_PLACEHOLDER;
     
     # Client settings
     client_max_body_size 10M;
@@ -938,8 +972,8 @@ server {
     client_header_timeout 30s;
     
     # SSL Configuration
-    ssl_certificate /etc/letsencrypt/live/$PROXY_DOMAIN/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/$PROXY_DOMAIN/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/PROXY_DOMAIN_PLACEHOLDER/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/PROXY_DOMAIN_PLACEHOLDER/privkey.pem;
     
     # SSL Security
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -958,12 +992,12 @@ server {
     add_header Referrer-Policy "strict-origin-when-cross-origin";
     
     # Rate limiting
-    limit_req zone=${PROJECT_NAME}_limit burst=20 nodelay;
-    limit_conn ${PROJECT_NAME}_conn 10;
+    limit_req zone=PROJECT_NAME_PLACEHOLDER_limit burst=20 nodelay;
+    limit_conn PROJECT_NAME_PLACEHOLDER_conn 10;
     
     # Logging
-    access_log /var/log/nginx/$PROXY_DOMAIN.access.log combined;
-    error_log /var/log/nginx/$PROXY_DOMAIN.error.log;
+    access_log /var/log/nginx/PROXY_DOMAIN_PLACEHOLDER.access.log combined;
+    error_log /var/log/nginx/PROXY_DOMAIN_PLACEHOLDER.error.log;
     
     # Gzip compression
     gzip on;
@@ -984,19 +1018,19 @@ server {
     
     # Proxy configuration
     location / {
-        proxy_pass http://${PROJECT_NAME}_backend;
+        proxy_pass http://PROJECT_NAME_PLACEHOLDER_backend;
         proxy_http_version 1.1;
-        proxy_cache_bypass \\$http_upgrade;
+        proxy_cache_bypass $http_upgrade;
         
         # Headers
-        proxy_set_header Upgrade \\$http_upgrade;
+        proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \\$host;
-        proxy_set_header X-Real-IP \\$remote_addr;
-        proxy_set_header X-Forwarded-For \\$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \\$scheme;
-        proxy_set_header X-Forwarded-Host \\$host;
-        proxy_set_header X-Forwarded-Port \\$server_port;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
         
         # Timeouts
         proxy_connect_timeout 30s;
@@ -1018,23 +1052,33 @@ server {
     # Health check endpoint
     location /nginx-health {
         access_log off;
-        return 200 "nginx healthy\\n";
+        return 200 "nginx healthy\n";
         add_header Content-Type text/plain;
     }
     
     # Block common attack patterns
-    location ~* \\.(git|svn|env|log|bak)\\$ {
+    location ~* \.(git|svn|env|log|bak)$ {
         deny all;
         return 404;
     }
     
     # Block PHP files
-    location ~* \\.php\\$ {
+    location ~* \.php$ {
         deny all;
         return 404;
     }
 }
 EOF
+
+    # Заменяем плейсхолдеры на реальные значения
+    sed -i "s/PROXY_DOMAIN_PLACEHOLDER/$PROXY_DOMAIN/g" "$PROJECT_DIR/config/nginx-proxy.conf"
+    sed -i "s/PROJECT_NAME_PLACEHOLDER/$PROJECT_NAME/g" "$PROJECT_DIR/config/nginx-proxy.conf"
+    sed -i "s/NODE_PORT_PLACEHOLDER/$NODE_PORT/g" "$PROJECT_DIR/config/nginx-proxy.conf"
+    sed -i "s/RATE_LIMIT_PLACEHOLDER/$RATE_LIMIT/g" "$PROJECT_DIR/config/nginx-proxy.conf"
+}
+
+# Вызываем функцию создания nginx конфигурации
+create_nginx_config
 
 # 14. Установка зависимостей Node.js
 log_info "Установка зависимостей Node.js..."
@@ -1053,7 +1097,7 @@ server {
     
     location /.well-known/acme-challenge/ {
         root /var/www/html;
-        try_files \\$uri \\$uri/ =404;
+        try_files \$uri \$uri/ =404;
     }
     
     location / {
@@ -1137,8 +1181,10 @@ check_status "Firewall настроен" "Ошибка настройки firewa
 # 19. Создание скриптов управления
 log_info "Создание скриптов управления..."
 
-# Скрипт статуса
-cat > $PROJECT_DIR/scripts/status.sh << EOF
+# Функция создания скриптов управления
+create_management_scripts() {
+    # Скрипт статуса
+    cat > $PROJECT_DIR/scripts/status.sh << EOF
 #!/bin/bash
 echo "=== $PROJECT_NAME STATUS ==="
 echo
@@ -1155,8 +1201,8 @@ echo "Health Check:"
 curl -s https://$PROXY_DOMAIN/health | jq . 2>/dev/null || curl -s https://$PROXY_DOMAIN/health
 EOF
 
-# Скрипт перезапуска
-cat > $PROJECT_DIR/scripts/restart.sh << EOF
+    # Скрипт перезапуска
+    cat > $PROJECT_DIR/scripts/restart.sh << EOF
 #!/bin/bash
 echo "Restarting $PROJECT_NAME..."
 pm2 restart $PROJECT_NAME
@@ -1164,8 +1210,8 @@ systemctl reload nginx
 echo "Restart completed"
 EOF
 
-# Скрипт логов
-cat > $PROJECT_DIR/scripts/logs.sh << EOF
+    # Скрипт логов
+    cat > $PROJECT_DIR/scripts/logs.sh << EOF
 #!/bin/bash
 echo "=== $PROJECT_NAME LOGS ==="
 echo "Use Ctrl+C to exit"
@@ -1173,8 +1219,8 @@ echo
 pm2 logs $PROJECT_NAME --lines 50
 EOF
 
-# Скрипт обновления SSL
-cat > $PROJECT_DIR/scripts/renew-ssl.sh << EOF
+    # Скрипт обновления SSL
+    cat > $PROJECT_DIR/scripts/renew-ssl.sh << EOF
 #!/bin/bash
 echo "Renewing SSL certificate for $PROXY_DOMAIN..."
 certbot renew --quiet
@@ -1182,9 +1228,12 @@ systemctl reload nginx
 echo "SSL renewal completed"
 EOF
 
-# Делаем скрипты исполняемыми
-chmod +x $PROJECT_DIR/scripts/*.sh
+    # Делаем скрипты исполняемыми
+    chmod +x $PROJECT_DIR/scripts/*.sh
+}
 
+# Вызываем функцию создания скриптов управления
+create_management_scripts
 check_status "Скрипты управления созданы" "Ошибка создания скриптов"
 
 # 20. Создание документации

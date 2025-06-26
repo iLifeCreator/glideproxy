@@ -5,6 +5,39 @@ All notable changes to GlideProxy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2024-06-26 - ИСПРАВЛЕННАЯ ВЕРСИЯ
+
+### 🔧 Critical Fixes
+- **nginx Configuration**: Fixed double escape symbols (\\$ → \$) causing syntax errors
+- **Port Conflicts**: Added port usage detection with netstat before installation
+- **Project Conflicts**: Added existing project detection with cleanup option
+- **Script Creation**: Ensured all management scripts are created reliably
+
+### ✨ New Features
+- **create_nginx_config()**: New function with proper escape handling using << 'EOF'
+- **create_management_scripts()**: Dedicated function for management script creation
+- **Project Validation**: Pre-installation checks for conflicts and dependencies
+
+### 🛠 Improvements
+- Added `net-tools` package for netstat command
+- Enhanced error handling and user feedback
+- Better validation of installation parameters
+- Improved documentation and troubleshooting guides
+
+### 🐛 Bug Fixes
+- Fixed nginx configuration syntax errors
+- Fixed SSL certificate acquisition issues
+- Fixed PM2 process management conflicts
+- Fixed management script creation interruptions
+
+### 📦 Dependencies
+- Added: net-tools (for netstat command)
+
+### 🔄 Migration
+- Fully backward compatible with v1.0 installations
+- Can be used to update existing configurations
+- No breaking changes to existing deployments
+
 ## [1.1.0] - 2024-12-28
 
 ### Fixed
