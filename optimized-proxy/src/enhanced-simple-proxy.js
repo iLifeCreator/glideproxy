@@ -316,8 +316,19 @@ const proxyOptions = {
   }
 };
 
-// Apply proxy middleware
-const proxy = createProxyMiddleware(proxyOptions);
+// Apply proxy middleware with path exclusion for health endpoints
+const proxy = createProxyMiddleware({
+  ...proxyOptions,
+  // Exclude health endpoints from proxying
+  filter: (pathname, req) => {
+    // Don't proxy health endpoints
+    if (pathname.startsWith('/health')) {
+      return false;
+    }
+    return true;
+  }
+});
+
 app.use('/', proxy);
 
 // Start server
