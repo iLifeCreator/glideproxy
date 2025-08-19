@@ -1,0 +1,59 @@
+{
+  "name": "ultra-optimized-glide-proxy",
+  "version": "3.0.0",
+  "description": "Ultra-high performance proxy server optimized for GlideApps with minimal latency",
+  "main": "src/ultra-optimized-proxy.js",
+  "scripts": {
+    "start": "node src/ultra-optimized-proxy.js",
+    "dev": "NODE_ENV=development nodemon src/ultra-optimized-proxy.js",
+    "prod": "NODE_ENV=production node src/ultra-optimized-proxy.js",
+    "test": "NODE_ENV=test node test/performance-test.js",
+    "benchmark": "node benchmark/load-test.js",
+    "health": "curl -s http://localhost:3000/health | jq",
+    "metrics": "curl -s http://localhost:3000/health/metrics | jq",
+    "install-deps": "npm install --production --no-optional",
+    "install-all": "npm install"
+  },
+  "keywords": [
+    "proxy",
+    "reverse-proxy",
+    "glideapps",
+    "performance",
+    "high-performance",
+    "nodejs",
+    "express",
+    "optimization",
+    "caching",
+    "compression"
+  ],
+  "author": "AI Assistant",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "dependencies": {
+    "compression": "^1.7.4",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "http-proxy-middleware": "^2.0.6",
+    "lru-cache": "^10.0.1",
+    "pino": "^8.15.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "pino-pretty": "^10.2.0",
+    "pm2": "^6.0.8"
+  },
+  "optionalDependencies": {
+    "pino-pretty": "^10.2.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/optimized-proxy/ultra-proxy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/optimized-proxy/ultra-proxy/issues"
+  },
+  "homepage": "https://github.com/optimized-proxy/ultra-proxy#readme"
+}
