@@ -7,7 +7,7 @@
 module.exports = {
   apps: [{
     name: 'enhanced-proxy-single',
-    script: './src/enhanced-simple-proxy.js',
+    script: './src/enhanced-simple-proxy-final.js',
     
     // Единственный инстанс для экономии памяти
     instances: 1,
